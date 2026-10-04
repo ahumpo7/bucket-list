@@ -130,10 +130,19 @@ class BucketListApp {
     this.render();
   }
 
-  // Local Storage
-  loadTrips() {
+  // Storage Management: Separation of Guest vs Authenticated Cloud User
+  isUserSignedIn() {
+    return window.firebaseService && window.firebaseService.currentUser;
+  }
+
+  getCloudStorageKey() {
+    const listId = (window.firebaseService && window.firebaseService.coupleListId) || window.DEFAULT_COUPLE_LIST_ID || "our-adventures-bucket-list";
+    return `romantic_bucket_list_cloud_${listId}`;
+  }
+
+  loadGuestTrips() {
     try {
-      const stored = localStorage.getItem('romantic_bucket_list_trips');
+      const stored = localStorage.getItem('romantic_bucket_list_guest_trips');
       if (stored) {
         const parsed = JSON.parse(stored);
         if (Array.isArray(parsed) && parsed.length > 0) {
@@ -141,23 +150,49 @@ class BucketListApp {
         }
       }
     } catch (e) {
-      console.error('Error loading trips from localStorage', e);
+      console.error('Error loading guest trips from localStorage', e);
     }
     return JSON.parse(JSON.stringify(DEFAULT_TRIPS));
   }
 
-  saveTrips() {
-    try {
-      localStorage.setItem('romantic_bucket_list_trips', JSON.stringify(this.trips));
-    } catch (e) {
-      console.error('Error saving trips to localStorage', e);
+  loadTrips() {
+    if (this.isUserSignedIn()) {
+      try {
+        const cloudCached = localStorage.getItem(this.getCloudStorageKey());
+        if (cloudCached) {
+          const parsed = JSON.parse(cloudCached);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            return parsed;
+          }
+        }
+      } catch (e) {
+        console.error('Error loading cloud cached trips', e);
+      }
     }
 
-    // Sync to Cloud Firestore if Google User is logged in
-    if (window.firebaseService && window.firebaseService.currentUser) {
+    return this.loadGuestTrips();
+  }
+
+  saveTrips() {
+    if (this.isUserSignedIn()) {
+      // 1. Save to Cloud Cache for this user/list
+      try {
+        localStorage.setItem(this.getCloudStorageKey(), JSON.stringify(this.trips));
+      } catch (e) {
+        console.error('Error saving cloud cache to localStorage', e);
+      }
+
+      // 2. Sync to Cloud Firestore in real time
       window.firebaseService.syncTripsToCloud(this.trips).catch(err => {
         console.error("Cloud sync failed:", err);
       });
+    } else {
+      // Save ONLY to Guest Storage (does not touch signed-in user's cloud account)
+      try {
+        localStorage.setItem('romantic_bucket_list_guest_trips', JSON.stringify(this.trips));
+      } catch (e) {
+        console.error('Error saving guest trips to localStorage', e);
+      }
     }
   }
 
@@ -1514,7 +1549,7 @@ class BucketListApp {
           window.firebaseService.subscribeToCoupleTrips((cloudTrips, meta) => {
             if (cloudTrips && Array.isArray(cloudTrips)) {
               this.trips = cloudTrips;
-              localStorage.setItem('romantic_bucket_list_trips', JSON.stringify(this.trips));
+              localStorage.setItem(this.getCloudStorageKey(), JSON.stringify(this.trips));
               this.render();
               const updater = meta && meta.lastUpdatedBy ? meta.lastUpdatedBy.name : 'Cloud';
               this.showToast(`Synced live from ${updater}! ☁️`);
@@ -1524,10 +1559,14 @@ class BucketListApp {
             }
           });
         } else {
-          // Signed out
+          // Signed out: switch back to the local guest trips list!
           if (btnLogin) btnLogin.style.display = 'inline-flex';
           if (profilePill) profilePill.style.display = 'none';
           if (userDropdown) userDropdown.style.display = 'none';
+
+          this.trips = this.loadGuestTrips();
+          this.render();
+          this.fitMapToBounds();
         }
       });
     };
@@ -1616,7 +1655,7 @@ class BucketListApp {
           window.firebaseService.subscribeToCoupleTrips((cloudTrips) => {
             if (cloudTrips && Array.isArray(cloudTrips)) {
               this.trips = cloudTrips;
-              localStorage.setItem('romantic_bucket_list_trips', JSON.stringify(this.trips));
+              localStorage.setItem(this.getCloudStorageKey(), JSON.stringify(this.trips));
               this.render();
             }
           });
