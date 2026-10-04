@@ -1553,8 +1553,12 @@ class BucketListApp {
         } catch (err) {
           if (err.message === "CONFIG_MISSING") {
             this.openCloudSetupModal();
+          } else if (err.code === 'auth/unauthorized-domain') {
+            alert('Firebase Notice:\nThe domain "' + window.location.hostname + '" is not authorized in your Firebase project yet.\n\nTo fix:\n1. Open Firebase Console > Authentication > Settings\n2. Under "Authorized domains", click "Add domain" and enter:\n' + window.location.hostname);
+          } else if (err.code === 'auth/operation-not-allowed') {
+            alert('Firebase Notice:\nGoogle Sign-In is not enabled yet in your Firebase project.\n\nTo fix:\n1. Open Firebase Console > Authentication > Sign-in method\n2. Click "Google" and toggle "Enable" then Save.');
           } else if (err.code !== 'auth/popup-closed-by-user') {
-            alert('Google Sign-In note: ' + (err.message || err));
+            alert('Google Sign-In notice: ' + (err.message || err));
           }
         }
       });
