@@ -16,7 +16,7 @@ const DEFAULT_TRIPS = [
     special: "19 waterfalls carved into sheer 200-foot shale and limestone cliffs along a 2-mile fairy-tale gorge. The famous stone Rainbow Bridge and Cavern Cascade (where you walk directly behind a thundering sheet of water) feel magical. Located right at the southern tip of Seneca Lake, surrounded by Finger Lakes wineries, cideries, and romantic lakefront dinners.",
     coupleTip: "Arrive before 9:00 AM to explore the gorge trail before crowds and tour buses arrive. Walk the gorge trail uphill, then take the park shuttle back down to avoid backtracking 800 stone stairs!",
     notes: "Plan a romantic weekend: hike the gorge in the morning, do wine tastings along Seneca Lake in the afternoon, and catch sunset over the water.",
-    imageUrl: "https://images.unsplash.com/photo-1542332213-9b5a5a3fad35?auto=format&fit=crop&w=800&q=80"
+    imageUrl: "https://images.unsplash.com/photo-1542332213-9b5a5a3fad35?auto=format&fit=crop&w=400&q=70"
   },
   {
     id: "cherry-springs-pa",
@@ -30,7 +30,7 @@ const DEFAULT_TRIPS = [
     special: "An official Gold-Tier International Dark Sky Park perched on an isolated 2,300-foot mountain summit surrounded by 262,000 acres of forest. It is one of the darkest places on the entire US Eastern Seaboard! On a clear night with no moon, the Milky Way is so intensely bright that it literally casts visible shadows on the ground.",
     coupleTip: "Strict etiquette: Only RED lights are permitted on the astronomy field (white light ruins night vision for 30 minutes!). Bring zero-gravity reclining camping chairs, heavy thermal blankets (mountain nights get cold even in July!), a thermos of hot cocoa, and an astronomy star-map app.",
     notes: "Check the 'Clear Sky Chart' forecast online before driving out. Target a weekend during a New Moon or during the Perseids meteor shower in mid-August.",
-    imageUrl: "https://images.unsplash.com/photo-1506703719100-a0f3a48c0f86?auto=format&fit=crop&w=800&q=80"
+    imageUrl: "https://images.unsplash.com/photo-1506703719100-a0f3a48c0f86?auto=format&fit=crop&w=400&q=70"
   },
   {
     id: "eternal-flame-falls-ny",
@@ -44,7 +44,7 @@ const DEFAULT_TRIPS = [
     special: "A rare geological phenomenon: a natural macro-seep of hydrocarbon gas burning inside a small shale grotto right behind a 35-foot cascading waterfall! It is one of only a handful of natural eternal flames in the world. The flickering fire seen through the veil of falling water feels like pure fantasy.",
     coupleTip: "Bring a long grill lighter with you just in case wind or water spray put the flame out — hikers regularly re-light it! Wear sturdy waterproof hiking boots or trail shoes with strong traction, as the trail leads directly down and through a muddy, slick shale creek bed.",
     notes: "Only 25 minutes south of Buffalo and 45 minutes south of Niagara Falls. Best combined with a scenic Western NY weekend getaway.",
-    imageUrl: "https://images.unsplash.com/photo-1432405972618-c60b0225b8f9?auto=format&fit=crop&w=800&q=80"
+    imageUrl: "https://images.unsplash.com/photo-1432405972618-c60b0225b8f9?auto=format&fit=crop&w=400&q=70"
   }
 ];
 
@@ -60,7 +60,7 @@ const SUGGESTIONS = [
     special: "Known as 'The Grand Canyon of the East.' The Genesee River roars through a 550-foot-deep gorge over three magnificent major waterfalls (Upper, Middle, and Lower Falls). In autumn, the foliage is legendary, and sunrise hot air balloon rides fly directly over the gorge!",
     coupleTip: "Have lunch or dinner at the historic Glen Iris Inn overlooking Middle Falls, and stop at Inspiration Point for the signature postcard view.",
     season: "Late May to Late October",
-    imageUrl: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=800&q=80"
+    imageUrl: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=400&q=70"
   },
   {
     id: "sugg-kinzua-bridge",
@@ -72,7 +72,7 @@ const SUGGESTIONS = [
     special: "An 1882 engineering marvel once called the 'Eighth Wonder of the World'. Partially toppled by a massive tornado in 2003, the remaining towers were transformed into a breathtaking 600-foot pedestrian skywalk with a glass-bottom floor peering 225 feet straight down into the gorge.",
     coupleTip: "Stand together over the glass floor for a thrilling photo, and hike the trail to the bottom to marvel at the massive twisted steel towers left resting as nature reclaimed them.",
     season: "Summer & Fall Foliage",
-    imageUrl: "https://images.unsplash.com/photo-1448375240586-882707db888b?auto=format&fit=crop&w=800&q=80"
+    imageUrl: "https://images.unsplash.com/photo-1448375240586-882707db888b?auto=format&fit=crop&w=400&q=70"
   },
   {
     id: "sugg-taughannock",
@@ -84,7 +84,7 @@ const SUGGESTIONS = [
     special: "Plunges 215 feet into a colossal limestone amphitheater — 33 feet taller than Niagara Falls! The lower gorge trail is an easy, romantic flat stroll along the creek bed with towering cliffs overhead, opening right up to Cayuga Lake.",
     coupleTip: "Pair with an evening dinner in downtown Ithaca or a visit to the Cornell Botanic Gardens. Great for a relaxed morning walk with coffee.",
     season: "Year-round (Gorge trail is flat & easy)",
-    imageUrl: "https://images.unsplash.com/photo-1433086966358-54859d0ed716?auto=format&fit=crop&w=800&q=80"
+    imageUrl: "https://images.unsplash.com/photo-1433086966358-54859d0ed716?auto=format&fit=crop&w=400&q=70"
   },
   {
     id: "sugg-pine-creek",
@@ -96,7 +96,7 @@ const SUGGESTIONS = [
     special: "A 47-mile deep canyon carved into the Pennsylvania Wilds. Features spectacular overlooks at Leonard Harrison and Colton Point State Parks, plus the scenic 62-mile Pine Creek Rail Trail running along the river floor.",
     coupleTip: "Rent tandem bicycles in the quaint gaslit Victorian town of Wellsboro and pedal down the flat canyon rail trail under the cliff shadows.",
     season: "Spring to Autumn",
-    imageUrl: "https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?auto=format&fit=crop&w=800&q=80"
+    imageUrl: "https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?auto=format&fit=crop&w=400&q=70"
   },
   {
     id: "sugg-niagara",
@@ -108,7 +108,7 @@ const SUGGESTIONS = [
     special: "The Cave of the Winds experience takes wooden walkways down to the 'Hurricane Deck' directly beneath Bridal Veil Falls, where you stand drenched in tropical-storm-force mist and spray. At night, the falls light up with colorful illuminations.",
     coupleTip: "Wear the provided yellow ponchos, hold on tight on the Hurricane Deck, and stroll Goat Island at twilight for the evening illumination light show.",
     season: "May to October (Cave of Winds)",
-    imageUrl: "https://images.unsplash.com/photo-1498429089284-41f8cf3ffd39?auto=format&fit=crop&w=800&q=80"
+    imageUrl: "https://images.unsplash.com/photo-1498429089284-41f8cf3ffd39?auto=format&fit=crop&w=400&q=70"
   }
 ];
 
@@ -523,7 +523,7 @@ class BucketListApp {
 
     const imageHtml = trip.imageUrl ? `
       <div class="card-image-wrap">
-        <img src="${trip.imageUrl}" alt="${trip.title}" loading="lazy" onerror="this.parentElement.style.display='none';">
+        <img src="${trip.imageUrl}" alt="${trip.title}" loading="lazy" decoding="async" onerror="this.parentElement.style.display='none';">
         <div class="card-badge-category">
           <i class="fa-solid ${catIcon}"></i> ${trip.category || 'Destination'}
         </div>
@@ -676,7 +676,7 @@ class BucketListApp {
 
     const popupContent = `
       <div class="map-popup-card">
-        ${trip.imageUrl ? `<img src="${trip.imageUrl}" class="map-popup-image" alt="${trip.title}">` : ''}
+        ${trip.imageUrl ? `<img src="${trip.imageUrl}" class="map-popup-image" alt="${trip.title}" loading="lazy" decoding="async">` : ''}
         <h4 class="map-popup-title">${trip.title}</h4>
         <div class="map-popup-loc"><i class="fa-solid fa-location-dot"></i> ${trip.location}</div>
         <p class="map-popup-desc">${trip.special}</p>
@@ -984,7 +984,7 @@ class BucketListApp {
       const card = document.createElement('div');
       card.className = 'suggestion-card';
       card.innerHTML = `
-        <img src="${sugg.imageUrl}" alt="${sugg.title}" class="sugg-img" loading="lazy">
+        <img src="${sugg.imageUrl}" alt="${sugg.title}" class="sugg-img" loading="lazy" decoding="async">
         <div class="sugg-content">
           <h4 class="sugg-title">${sugg.title}</h4>
           <div class="sugg-loc"><i class="fa-solid fa-location-dot"></i> ${sugg.location}</div>
@@ -1291,12 +1291,12 @@ class BucketListApp {
 
   getPhotoForPlace(name, category) {
     const photos = {
-      'State Park': 'https://images.unsplash.com/photo-1510312305653-8ed496efae75?auto=format&fit=crop&w=800&q=80',
-      'Waterfall': 'https://images.unsplash.com/photo-1432405972618-c60b0225b8f9?auto=format&fit=crop&w=800&q=80',
-      'Stargazing': 'https://images.unsplash.com/photo-1506703719100-a0f3a48c0f86?auto=format&fit=crop&w=800&q=80',
-      'Hiking & Canyon': 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=800&q=80',
-      'Romantic Getaway': 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=800&q=80',
-      'Scenic Road Trip': 'https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?auto=format&fit=crop&w=800&q=80'
+      'State Park': 'https://images.unsplash.com/photo-1510312305653-8ed496efae75?auto=format&fit=crop&w=400&q=70',
+      'Waterfall': 'https://images.unsplash.com/photo-1432405972618-c60b0225b8f9?auto=format&fit=crop&w=400&q=70',
+      'Stargazing': 'https://images.unsplash.com/photo-1506703719100-a0f3a48c0f86?auto=format&fit=crop&w=400&q=70',
+      'Hiking & Canyon': 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=400&q=70',
+      'Romantic Getaway': 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=400&q=70',
+      'Scenic Road Trip': 'https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?auto=format&fit=crop&w=400&q=70'
     };
     return photos[category] || photos['State Park'];
   }
