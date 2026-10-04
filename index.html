@@ -20,7 +20,7 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" media="print" onload="this.media='all'"/>
   <noscript><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"/></noscript>
   
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css?v=3.0">
 </head>
 <body>
   <div class="app-layout">
@@ -462,20 +462,17 @@
     </div>
   </div>
 
-  <!-- Firebase Compat SDK (Pre-bundled, super fast CDN, eliminates 60+ ES module waterfall) -->
-  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
-  <script src="firebase-config.js"></script>
-  <script src="firebase-service.js"></script>
-
-  <!-- Leaflet JS (Local first, CDN fallback) -->
+  <!-- Core UI & Map - Executes Immediately for Instant Page Paint (<50ms) -->
   <script src="leaflet.js"></script>
   <script>
     if (typeof L === 'undefined') {
       document.write('<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"><\/script>');
     }
   </script>
-  <script src="app.js"></script>
+  <script src="app.js?v=3.0"></script>
+
+  <!-- Firebase Cloud Sync (Loads Asynchronously in Background via firebase-service) -->
+  <script src="firebase-config.js?v=3.0"></script>
+  <script src="firebase-service.js?v=3.0"></script>
 </body>
 </html>

@@ -124,6 +124,7 @@ class BucketListApp {
     this.routeMarkers = [];
     this.searchAbortController = null;
     this.modalSearchAbortController = null;
+    this.searchCache = new Map();
 
     this.initMap();
     this.bindEvents();
@@ -132,7 +133,8 @@ class BucketListApp {
 
   // Storage Management: Separation of Guest vs Authenticated Cloud User
   isUserSignedIn() {
-    return window.firebaseService && window.firebaseService.currentUser;
+    return (window.firebaseService && window.firebaseService.currentUser) ||
+           localStorage.getItem('romantic_user_signed_in') === 'true';
   }
 
   getCloudStorageKey() {
@@ -207,10 +209,11 @@ class BucketListApp {
       attributionControl: true
     }).setView(defaultCenter, defaultZoom);
 
-    // Tile Layers (OpenStreetMap standard and Esri)
+    // Tile Layers (High-speed Fastly edge CDN with 4 subdomains)
     this.baseLayers = {
-      voyager: L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+      voyager: L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/">CARTO</a>',
+        subdomains: 'abcd',
         maxZoom: 19
       }),
       topo: L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}', {
@@ -223,7 +226,7 @@ class BucketListApp {
       })
     };
 
-    // Default to OpenStreetMap (reliable, zero auth required, works everywhere)
+    // Default to CartoDB Voyager (ultra-fast edge CDN, smooth romantic styling)
     this.baseLayers.voyager.addTo(this.map);
 
     // Map click listener to capture coordinates when adding custom spot
@@ -1218,6 +1221,11 @@ class BucketListApp {
 
   async searchNominatim(query, signal) {
     if (!query) return [];
+    const normalized = query.trim().toLowerCase();
+    if (this.searchCache && this.searchCache.has(normalized)) {
+      return this.searchCache.get(normalized);
+    }
+
     const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&addressdetails=1&limit=8&accept-language=en`;
     
     try {
@@ -1229,7 +1237,7 @@ class BucketListApp {
       if (!response.ok) return [];
       const data = await response.json();
 
-      return data.map(item => {
+      const results = data.map(item => {
         const title = item.name || item.display_name.split(',')[0].trim();
         const location = this.formatLocation(item);
         const category = this.inferCategory(item);
@@ -1249,6 +1257,12 @@ class BucketListApp {
           type: item.type || item.class || 'Place'
         };
       });
+
+      if (this.searchCache) {
+        this.searchCache.set(normalized, results);
+      }
+
+      return results;
     } catch (e) {
       if (e.name === 'AbortError') throw e;
       console.error('Nominatim search error:', e);
@@ -1733,7 +1747,11 @@ class BucketListApp {
   }
 }
 
-// Global App Initialization
-document.addEventListener('DOMContentLoaded', () => {
-  window.bucketApp = new BucketListApp();
-});
+// Global App Initialization - Immediate start for 0ms delay
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', () => {
+    if (!window.bucketApp) window.bucketApp = new BucketListApp();
+  });
+} else {
+  if (!window.bucketApp) window.bucketApp = new BucketListApp();
+}

@@ -1,6 +1,7 @@
 /**
  * Firebase Authentication & Firestore Realtime Database Service
- * Uses pre-bundled Firebase Compat SDK for ultra-fast load times (no 60+ ES module waterfall)
+ * Asynchronously loads pre-bundled Firebase Compat SDK in the background
+ * so it NEVER blocks UI rendering, Leaflet map initialization, or user interaction.
  */
 
 class FirebaseService {
@@ -14,6 +15,9 @@ class FirebaseService {
     this.coupleListId = localStorage.getItem('couple_list_id') || window.DEFAULT_COUPLE_LIST_ID || "our-adventures-bucket-list";
     this.authCallbacks = [];
     this.authResolved = false;
+    this.isLoadingSdk = false;
+    this.sdkLoaded = false;
+    this._loadPromise = null;
   }
 
   // Load config from window.FIREBASE_CONFIG or localStorage
@@ -37,19 +41,77 @@ class FirebaseService {
     return null;
   }
 
-  init() {
-    if (typeof firebase === 'undefined') {
-      console.warn("Firebase SDK not yet loaded in window.");
-      return false;
+  // Asynchronously load Firebase SDK in background (parallel non-blocking downloads)
+  async loadSdk() {
+    if (this.sdkLoaded) return true;
+    if (typeof firebase !== 'undefined' && firebase.auth && firebase.firestore) {
+      this.sdkLoaded = true;
+      return true;
     }
 
+    if (this._loadPromise) {
+      return this._loadPromise;
+    }
+
+    this._loadPromise = (async () => {
+      const loadScript = (src) => {
+        return new Promise((resolve, reject) => {
+          // Check if already injected
+          const existing = document.querySelector(`script[src="${src}"]`);
+          if (existing) {
+            if (existing.getAttribute('data-loaded') === 'true') return resolve();
+            existing.addEventListener('load', () => resolve());
+            existing.addEventListener('error', (e) => reject(e));
+            return;
+          }
+
+          const script = document.createElement('script');
+          script.src = src;
+          script.async = true;
+          script.onload = () => {
+            script.setAttribute('data-loaded', 'true');
+            resolve();
+          };
+          script.onerror = (err) => reject(err);
+          document.head.appendChild(script);
+        });
+      };
+
+      try {
+        // Step 1: Base App SDK
+        await loadScript('https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js');
+        // Step 2: Auth and Firestore in parallel
+        await Promise.all([
+          loadScript('https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js'),
+          loadScript('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js')
+        ]);
+
+        this.sdkLoaded = true;
+        return true;
+      } catch (err) {
+        console.error("Failed to load Firebase scripts asynchronously:", err);
+        return false;
+      }
+    })();
+
+    return this._loadPromise;
+  }
+
+  async init() {
     const config = this.getConfig();
     if (!config || !config.apiKey || !config.projectId) {
       this.isConfigured = false;
       this.authResolved = true;
-      this.authCallbacks.forEach(cb => {
-        try { cb(null); } catch (err) { console.error(err); }
-      });
+      this.notifyAuthChange(null);
+      return false;
+    }
+
+    const loaded = await this.loadSdk();
+    if (!loaded || typeof firebase === 'undefined') {
+      console.warn("Firebase SDK could not be loaded.");
+      this.isConfigured = false;
+      this.authResolved = true;
+      this.notifyAuthChange(null);
       return false;
     }
 
@@ -67,25 +129,39 @@ class FirebaseService {
       this.auth.onAuthStateChanged((user) => {
         this.currentUser = user;
         this.authResolved = true;
-        this.authCallbacks.forEach(cb => {
-          try { cb(user); } catch (err) { console.error(err); }
-        });
+        if (user) {
+          localStorage.setItem('romantic_user_signed_in', 'true');
+        } else {
+          localStorage.removeItem('romantic_user_signed_in');
+        }
+        this.notifyAuthChange(user);
       });
 
+      window.dispatchEvent(new CustomEvent('firebase-service-ready'));
       return true;
     } catch (error) {
       console.error("Firebase initialization failed:", error);
       this.isConfigured = false;
       this.authResolved = true;
-      this.authCallbacks.forEach(cb => {
-        try { cb(null); } catch (err) { console.error(err); }
-      });
+      this.notifyAuthChange(null);
       return false;
     }
   }
 
+  notifyAuthChange(user) {
+    this.authCallbacks.forEach(cb => {
+      try { cb(user); } catch (err) { console.error(err); }
+    });
+  }
+
   // Real Google Sign-In with popup
   async loginWithGoogle() {
+    if (!this.sdkLoaded) {
+      await this.loadSdk();
+    }
+    if (!this.isConfigured) {
+      await this.init();
+    }
     if (!this.isConfigured) {
       throw new Error("CONFIG_MISSING");
     }
@@ -96,6 +172,7 @@ class FirebaseService {
     try {
       const result = await this.auth.signInWithPopup(provider);
       this.currentUser = result.user;
+      localStorage.setItem('romantic_user_signed_in', 'true');
       return result.user;
     } catch (error) {
       console.error("Google sign-in error:", error);
@@ -105,6 +182,7 @@ class FirebaseService {
 
   // Sign out
   async logout() {
+    localStorage.removeItem('romantic_user_signed_in');
     if (this.unsubscribeTrips) {
       this.unsubscribeTrips();
       this.unsubscribeTrips = null;
@@ -188,16 +266,12 @@ class FirebaseService {
 // Attach singleton to window
 window.firebaseService = new FirebaseService();
 
-// Try initializing immediately or as soon as firebase script finishes loading
-function tryInitFirebase() {
-  if (typeof firebase !== 'undefined' && window.firebaseService) {
-    window.firebaseService.init();
-    window.dispatchEvent(new CustomEvent('firebase-service-ready'));
+// Kick off background initialization without blocking main thread
+if (typeof window !== 'undefined') {
+  // Use requestIdleCallback or immediate setTimeout to run in background
+  if ('requestIdleCallback' in window) {
+    window.requestIdleCallback(() => window.firebaseService.init());
+  } else {
+    setTimeout(() => window.firebaseService.init(), 100);
   }
-}
-
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', tryInitFirebase);
-} else {
-  tryInitFirebase();
 }
