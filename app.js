@@ -152,6 +152,13 @@ class BucketListApp {
     } catch (e) {
       console.error('Error saving trips to localStorage', e);
     }
+
+    // Sync to Cloud Firestore if Google User is logged in
+    if (window.firebaseService && window.firebaseService.currentUser) {
+      window.firebaseService.syncTripsToCloud(this.trips).catch(err => {
+        console.error("Cloud sync failed:", err);
+      });
+    }
   }
 
   // Initialize Leaflet Map
@@ -379,6 +386,9 @@ class BucketListApp {
 
     // Initialize Real-World Place Search
     this.initRealPlaceSearch();
+
+    // Initialize Google Auth & Cloud Sync
+    this.initFirebaseAuthUI();
   }
 
   // Rendering
@@ -1454,6 +1464,229 @@ class BucketListApp {
     document.getElementById('form-search-place').value = place.title;
 
     this.showToast(`Review details and click Save Destination!`);
+  }
+
+  // ========================================================
+  // Google Authentication & Cloud Firestore Sync
+  // ========================================================
+
+  initFirebaseAuthUI() {
+    const btnLogin = document.getElementById('btn-google-login');
+    const profilePill = document.getElementById('user-profile-pill');
+    const userDropdown = document.getElementById('user-dropdown-menu');
+    const btnSignout = document.getElementById('btn-google-signout');
+    const btnSyncNow = document.getElementById('btn-cloud-sync-now');
+    const coupleCodeInput = document.getElementById('input-couple-code');
+    const btnSaveCoupleCode = document.getElementById('btn-save-couple-code');
+    const btnOpenSetup = document.getElementById('btn-open-cloud-settings');
+    const menuSetupTrigger = document.getElementById('menu-cloud-setup-trigger');
+    const closeSetupBtn = document.getElementById('cloud-setup-close');
+    const cancelSetupBtn = document.getElementById('cloud-setup-cancel');
+    const formSetup = document.getElementById('form-firebase-config');
+
+    // Listener for Auth Changes
+    const setupAuthWatcher = () => {
+      if (!window.firebaseService) return;
+
+      window.firebaseService.onAuthChange((user) => {
+        if (user) {
+          // User is signed in with Google!
+          if (btnLogin) btnLogin.style.display = 'none';
+          if (profilePill) profilePill.style.display = 'flex';
+
+          const avatar = document.getElementById('user-avatar');
+          const nameSpan = document.getElementById('user-display-name');
+          const dropAvatar = document.getElementById('dropdown-user-avatar');
+          const dropName = document.getElementById('dropdown-user-name');
+          const dropEmail = document.getElementById('dropdown-user-email');
+
+          const userPhoto = user.photoURL || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80';
+          const userName = user.displayName ? user.displayName.split(' ')[0] : 'Google User';
+
+          if (avatar) avatar.src = userPhoto;
+          if (nameSpan) nameSpan.textContent = userName;
+          if (dropAvatar) dropAvatar.src = userPhoto;
+          if (dropName) dropName.textContent = user.displayName || 'Google User';
+          if (dropEmail) dropEmail.textContent = user.email || '';
+          if (coupleCodeInput) coupleCodeInput.value = window.firebaseService.coupleListId;
+
+          // Subscribe to live Firestore sync for the shared couple bucket list!
+          window.firebaseService.subscribeToCoupleTrips((cloudTrips, meta) => {
+            if (cloudTrips && Array.isArray(cloudTrips)) {
+              this.trips = cloudTrips;
+              localStorage.setItem('romantic_bucket_list_trips', JSON.stringify(this.trips));
+              this.render();
+              const updater = meta && meta.lastUpdatedBy ? meta.lastUpdatedBy.name : 'Cloud';
+              this.showToast(`Synced live from ${updater}! ☁️`);
+            } else if (cloudTrips === null) {
+              // First time in Firestore: save our local starter trips up to the cloud!
+              window.firebaseService.syncTripsToCloud(this.trips);
+            }
+          });
+        } else {
+          // Signed out
+          if (btnLogin) btnLogin.style.display = 'inline-flex';
+          if (profilePill) profilePill.style.display = 'none';
+          if (userDropdown) userDropdown.style.display = 'none';
+        }
+      });
+    };
+
+    if (window.firebaseService) {
+      setupAuthWatcher();
+    } else {
+      window.addEventListener('firebase-service-ready', setupAuthWatcher);
+    }
+
+    // Google Sign-in click
+    if (btnLogin) {
+      btnLogin.addEventListener('click', async () => {
+        if (!window.firebaseService || !window.firebaseService.isConfigured) {
+          this.openCloudSetupModal();
+          return;
+        }
+
+        try {
+          this.showToast('Signing in with Google...');
+          await window.firebaseService.loginWithGoogle();
+          this.showToast('Signed in successfully! Loading cloud bucket list...');
+        } catch (err) {
+          if (err.message === "CONFIG_MISSING") {
+            this.openCloudSetupModal();
+          } else if (err.code !== 'auth/popup-closed-by-user') {
+            alert('Google Sign-In note: ' + (err.message || err));
+          }
+        }
+      });
+    }
+
+    // Profile pill toggles dropdown menu
+    if (profilePill) {
+      profilePill.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (userDropdown) {
+          userDropdown.style.display = userDropdown.style.display === 'none' ? 'flex' : 'none';
+        }
+      });
+    }
+
+    document.addEventListener('click', (e) => {
+      if (userDropdown && !userDropdown.contains(e.target) && !profilePill.contains(e.target)) {
+        userDropdown.style.display = 'none';
+      }
+    });
+
+    // Sign out button
+    if (btnSignout) {
+      btnSignout.addEventListener('click', async () => {
+        if (window.firebaseService) {
+          await window.firebaseService.logout();
+          this.showToast('Signed out. Your trips are saved safely in the cloud.');
+        }
+        if (userDropdown) userDropdown.style.display = 'none';
+      });
+    }
+
+    // Manual sync button
+    if (btnSyncNow) {
+      btnSyncNow.addEventListener('click', async () => {
+        if (window.firebaseService && window.firebaseService.currentUser) {
+          try {
+            await window.firebaseService.syncTripsToCloud(this.trips);
+            this.showToast('All trips synced to Google Cloud! ☁️');
+          } catch (e) {
+            this.showToast('Sync failed: ' + e.message);
+          }
+        }
+        if (userDropdown) userDropdown.style.display = 'none';
+      });
+    }
+
+    // Save Couple List Key (e.g. for sharing with girlfriend)
+    if (btnSaveCoupleCode && coupleCodeInput) {
+      btnSaveCoupleCode.addEventListener('click', () => {
+        const val = coupleCodeInput.value.trim();
+        if (val && window.firebaseService) {
+          window.firebaseService.setCoupleListId(val);
+          this.showToast(`Couple key set to "${val}". Re-syncing...`);
+          window.firebaseService.subscribeToCoupleTrips((cloudTrips) => {
+            if (cloudTrips && Array.isArray(cloudTrips)) {
+              this.trips = cloudTrips;
+              localStorage.setItem('romantic_bucket_list_trips', JSON.stringify(this.trips));
+              this.render();
+            }
+          });
+        }
+        if (userDropdown) userDropdown.style.display = 'none';
+      });
+    }
+
+    // Cloud Setup modal triggers
+    if (btnOpenSetup) {
+      btnOpenSetup.addEventListener('click', () => {
+        if (userDropdown) userDropdown.style.display = 'none';
+        this.openCloudSetupModal();
+      });
+    }
+    if (menuSetupTrigger) {
+      menuSetupTrigger.addEventListener('click', () => {
+        const dataMenu = document.getElementById('data-menu');
+        if (dataMenu) dataMenu.style.display = 'none';
+        this.openCloudSetupModal();
+      });
+    }
+    if (closeSetupBtn) closeSetupBtn.addEventListener('click', () => this.closeCloudSetupModal());
+    if (cancelSetupBtn) cancelSetupBtn.addEventListener('click', () => this.closeCloudSetupModal());
+
+    // Save Firebase Credentials form
+    if (formSetup) {
+      formSetup.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const apiKey = document.getElementById('fb-apiKey').value.trim();
+        const projectId = document.getElementById('fb-projectId').value.trim();
+        const authDomain = document.getElementById('fb-authDomain').value.trim() || `${projectId}.firebaseapp.com`;
+        const appId = document.getElementById('fb-appId').value.trim();
+
+        const config = { apiKey, projectId, authDomain, appId };
+        localStorage.setItem('custom_firebase_config', JSON.stringify(config));
+
+        if (window.firebaseService) {
+          window.firebaseService.init();
+        }
+
+        this.closeCloudSetupModal();
+        this.showToast('Google Firebase credentials connected! Signing in...');
+
+        setTimeout(() => {
+          if (window.firebaseService) {
+            window.firebaseService.loginWithGoogle().catch(() => {});
+          }
+        }, 400);
+      });
+    }
+  }
+
+  openCloudSetupModal() {
+    const modal = document.getElementById('modal-cloud-setup');
+    if (!modal) return;
+
+    const stored = localStorage.getItem('custom_firebase_config');
+    if (stored) {
+      try {
+        const cfg = JSON.parse(stored);
+        if (cfg.apiKey) document.getElementById('fb-apiKey').value = cfg.apiKey;
+        if (cfg.projectId) document.getElementById('fb-projectId').value = cfg.projectId;
+        if (cfg.authDomain) document.getElementById('fb-authDomain').value = cfg.authDomain;
+        if (cfg.appId) document.getElementById('fb-appId').value = cfg.appId;
+      } catch (e) {}
+    }
+
+    modal.style.display = 'flex';
+  }
+
+  closeCloudSetupModal() {
+    const modal = document.getElementById('modal-cloud-setup');
+    if (modal) modal.style.display = 'none';
   }
 }
 
