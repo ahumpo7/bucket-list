@@ -177,17 +177,20 @@ class BucketListApp {
 
   saveTrips() {
     if (this.isUserSignedIn()) {
-      // 1. Save to Cloud Cache for this user/list
+      // 1. Save to Cloud Cache for this user/list immediately (0ms)
       try {
         localStorage.setItem(this.getCloudStorageKey(), JSON.stringify(this.trips));
       } catch (e) {
         console.error('Error saving cloud cache to localStorage', e);
       }
 
-      // 2. Sync to Cloud Firestore in real time
-      window.firebaseService.syncTripsToCloud(this.trips).catch(err => {
-        console.error("Cloud sync failed:", err);
-      });
+      // 2. Sync to Cloud Firestore with debounce to avoid rapid redundant network requests
+      clearTimeout(this._cloudSyncDebounce);
+      this._cloudSyncDebounce = setTimeout(() => {
+        window.firebaseService.syncTripsToCloud(this.trips).catch(err => {
+          console.error("Cloud sync failed:", err);
+        });
+      }, 150);
     } else {
       // Save ONLY to Guest Storage (does not touch signed-in user's cloud account)
       try {
@@ -657,15 +660,15 @@ class BucketListApp {
     }
   }
 
-  createCustomMarker(trip) {
-    const iconClass = trip.status === 'completed' ? 'fa-check' :
-                      trip.status === 'planned' ? 'fa-calendar-check' : 'fa-heart';
+  createCustomIcon(status) {
+    const iconClass = status === 'completed' ? 'fa-check' :
+                      status === 'planned' ? 'fa-calendar-check' : 'fa-heart';
 
-    const customIcon = L.divIcon({
+    return L.divIcon({
       className: 'custom-pin-wrapper',
       html: `
         <div class="custom-pin">
-          <div class="pin-bubble status-${trip.status}">
+          <div class="pin-bubble status-${status}">
             <i class="fa-solid ${iconClass}"></i>
           </div>
         </div>
@@ -674,7 +677,17 @@ class BucketListApp {
       iconAnchor: [18, 36],
       popupAnchor: [0, -36]
     });
+  }
 
+  updateTripMarker(trip) {
+    const marker = this.markers[trip.id];
+    if (marker) {
+      marker.setIcon(this.createCustomIcon(trip.status));
+    }
+  }
+
+  createCustomMarker(trip) {
+    const customIcon = this.createCustomIcon(trip.status);
     const marker = L.marker([trip.lat, trip.lng], { icon: customIcon });
 
     const popupContent = `
@@ -862,19 +875,48 @@ class BucketListApp {
   // CRUD Operations
   updateTripStatus(tripId, newStatus) {
     const trip = this.trips.find(t => t.id === tripId);
-    if (trip) {
-      trip.status = newStatus;
-      this.saveTrips();
-      this.updateStats();
-      this.updateMapMarkers();
-      
-      const select = document.querySelector(`.status-select[data-id="${tripId}"]`);
-      if (select) {
-        select.className = `status-select ${newStatus}`;
-      }
+    if (!trip) return;
 
-      this.showToast(`Updated "${trip.title}" to ${newStatus.toUpperCase()}`);
+    // 1. Immediately update trip data in memory (0ms)
+    trip.status = newStatus;
+
+    // 2. Immediately update the select element class and value
+    const select = document.querySelector(`.status-select[data-id="${tripId}"]`);
+    if (select) {
+      select.className = `status-select ${newStatus}`;
+      select.value = newStatus;
     }
+
+    // 3. Immediately update stats counter
+    this.updateStats();
+
+    // 4. Immediately update map pin marker color/icon (0.1ms)
+    this.updateTripMarker(trip);
+
+    // 5. If currently filtered by status and trip was moved out of current filter
+    if (this.currentFilter !== 'all' && this.currentFilter !== newStatus) {
+      const card = document.querySelector(`.trip-card[data-id="${tripId}"]`);
+      if (card) {
+        card.style.transition = 'all 0.15s ease-out';
+        card.style.opacity = '0';
+        card.style.transform = 'scale(0.96)';
+        setTimeout(() => {
+          this.renderList();
+        }, 150);
+      } else {
+        this.renderList();
+      }
+    }
+
+    // 6. Update route if route mode is active
+    if (this.routeModeActive) {
+      this.drawRoadTripRoute();
+    }
+
+    // 7. Save locally and queue debounced cloud sync
+    this.saveTrips();
+
+    this.showToast(`Updated "${trip.title}" to ${newStatus.toUpperCase()}`);
   }
 
   deleteTrip(tripId) {
@@ -1562,6 +1604,18 @@ class BucketListApp {
           // Subscribe to live Firestore sync for the shared couple bucket list!
           window.firebaseService.subscribeToCoupleTrips((cloudTrips, meta) => {
             if (cloudTrips && Array.isArray(cloudTrips)) {
+              // Check if incoming trips are identical to our local trips or if this is our own write echoing back
+              const isIdentical = JSON.stringify(this.trips) === JSON.stringify(cloudTrips);
+              const isMyOwnUpdate = meta && meta.lastUpdatedBy && window.firebaseService.currentUser &&
+                                    meta.lastUpdatedBy.uid === window.firebaseService.currentUser.uid;
+
+              if (isIdentical || isMyOwnUpdate) {
+                // Silently update cloud cache in localStorage without wiping the DOM
+                localStorage.setItem(this.getCloudStorageKey(), JSON.stringify(cloudTrips));
+                return;
+              }
+
+              // Legitimate update from partner: re-render cleanly
               this.trips = cloudTrips;
               localStorage.setItem(this.getCloudStorageKey(), JSON.stringify(this.trips));
               this.render();
